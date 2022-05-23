@@ -42,6 +42,45 @@ namespace ConnectorGrasshopper.Extras
       }
     }
 
+    public static Base DataTreeToSpeckle(GH_Structure<IGH_Goo> dataInput, ISpeckleConverter converter,CancellationToken cancellationToken, Action OnConversionProgress = null)
+    {
+      var @base = new Base();
+      
+      dataInput.Paths.ToList().ForEach(path =>
+      {
+        var key = path.ToString();
+        var value = dataInput.get_Branch(path);
+        var converted = new List<object>();
+        foreach (var item in value) 
+          converted.Add(TryConvertItemToSpeckle(item, converter, true, OnConversionProgress));
+        @base[key] = converted;
+      });
+      
+      return @base;
+    }
+
+    public static GH_Structure<IGH_Goo> DataTreeToNative(Base @base, ISpeckleConverter converter,
+      Action OnConversionProgress = null)
+    {
+      var dataTree = new GH_Structure<IGH_Goo>();
+      @base.GetDynamicMembers().ToList().ForEach(key =>
+      {
+        var value = @base[key];
+        var path = new GH_Path();
+        var res = path.FromString(key);
+        var converted = TryConvertItemToNative(value, converter);
+        dataTree.Append(converted, path);
+      });
+      
+      return dataTree;
+    }
+
+    public static bool CanConvertToDataTree(Base @base)
+    {
+      var regex = new Regex(@"{\d(;\d)*}");
+      var isDataTree = @base.GetDynamicMembers().All(el => regex.Match(el).Success);
+      return isDataTree;
+    }
     public static List<object> DataTreeToNestedLists(GH_Structure<IGH_Goo> dataInput, ISpeckleConverter converter, Action OnConversionProgress = null)
     {
       return DataTreeToNestedLists(dataInput, converter, CancellationToken.None, OnConversionProgress);
