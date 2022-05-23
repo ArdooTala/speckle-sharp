@@ -6,6 +6,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Grasshopper;
 using Grasshopper.Kernel;
@@ -65,11 +66,11 @@ namespace ConnectorGrasshopper.Extras
       var dataTree = new GH_Structure<IGH_Goo>();
       @base.GetDynamicMembers().ToList().ForEach(key =>
       {
-        var value = @base[key];
+        var value = @base[key] as List<object>;
         var path = new GH_Path();
         var res = path.FromString(key);
-        var converted = TryConvertItemToNative(value, converter);
-        dataTree.Append(converted, path);
+        var converted = value.Select(item => TryConvertItemToNative(item, converter));
+        dataTree.AppendRange(converted, path);
       });
       
       return dataTree;
@@ -81,6 +82,7 @@ namespace ConnectorGrasshopper.Extras
       var isDataTree = @base.GetDynamicMembers().All(el => regex.Match(el).Success);
       return isDataTree;
     }
+    
     public static List<object> DataTreeToNestedLists(GH_Structure<IGH_Goo> dataInput, ISpeckleConverter converter, Action OnConversionProgress = null)
     {
       return DataTreeToNestedLists(dataInput, converter, CancellationToken.None, OnConversionProgress);
